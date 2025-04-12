@@ -1,31 +1,29 @@
 FROM golang:1.22-alpine AS builder
+ # base image
 
-WORKDIR /usr/src/app/
+#go to docker hub for go lang image
 
-# Use Go build cache for dependencies
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
-    mkdir -p /root/.cache/go-build
+WORKDIR /usr/src/app
 
-# Copy
-COPY go.mod go.sum ./
+COPY . . 
+ # copy source code , else fails
 
-# Download
 RUN go mod download
 
-# Copy the rest of the source code
-COPY . .
+RUN go build -o product-catalog ./   
+ # creates file
 
-RUN go build -o product-catalog .
+#here we an stop docker file by CMD or ENTRYPOINT like CMD [./product-catalog]
 
-####################################
+FROM alpine AS release 
 
-FROM alpine AS release
+WORKDIR /usr/src/app
 
-WORKDIR /usr/src/app/
+COPY ./products ./products  
+ # because the content is in product.json
+COPY --from=builder /usr/src/app/product-catalog ./
 
-COPY ./products/ ./products/
-COPY --from=builder /usr/src/app/product-catalog/ ./
-
+#EXPOSE ${PRODUCT_CATALOG_PORT}
 ENV PRODUCT_CATALOG_PORT 8088
-ENTRYPOINT [ "./product-catalog" ]
+ENTRYPOINT ["./product-catalog"]
+
